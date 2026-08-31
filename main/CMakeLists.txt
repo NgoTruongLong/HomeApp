@@ -7,5 +7,5 @@ list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/network/time_control")
 
 idf_component_register(SRCS "main.c"
                        PRIV_REQUIRES spi_flash
-                       REQUIRES network time_control
+                       REQUIRES network time_control "driver"
                        INCLUDE_DIRS "${MAIN_DIRS}")

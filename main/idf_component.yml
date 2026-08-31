@@ -14,5 +14,3 @@ dependencies:
   #   # `public` flag doesn't have an effect dependencies of the `main` component.
   #   # All dependencies of `main` are public by default.
   #   public: true
-  lutzbellmann/esp32_aht20_bmp280: ^0.2.2
-  petrovgp/esp-pms: ^1.0.0

@@ -3,30 +3,8 @@ dependencies:
     source:
       type: idf
     version: 5.5.5
-  lutzbellmann/esp32_aht20_bmp280:
-    component_hash: 7c32e50b9c7c04e909ab5c0dab8c26bd36dd25b77b27b6bb5f185e5430b55c74
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=5.2'
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 0.2.2
-  petrovgp/esp-pms:
-    component_hash: 99ece412a2ee051ba1a467d42297e231f5c42e89da768b0f9dde7f8fb9a285dc
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=4.1.0'
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 1.0.0
 direct_dependencies:
 - idf
-- lutzbellmann/esp32_aht20_bmp280
-- petrovgp/esp-pms
-manifest_hash: 157c5a1249fb0490fcb8d8eb131f7ef8631f9e573c740f4b8fc618cd0b975e75
+manifest_hash: e44bf68eca6b7b264ddae08cd014cd3294c0473230381b6d6f88ed18ec879038
 target: esp32s3
 version: 2.0.0
