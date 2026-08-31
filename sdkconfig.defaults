@@ -1,0 +1,4 @@
+# Increase FreeRTOS timer service task stack
+# Fixes: "A stack overflow in task Tmr Svc has been detected"
+# caused by ESP_LOGI() + xTimerChangePeriod()/xTimerStart() in pms_timer_cb
+CONFIG_FREERTOS_TIMER_TASK_STACK_DEPTH=4096

@@ -1,0 +1,16 @@
+menu "WiFi Configuration"
+
+    config NETWORK_WIFI_SSID
+        string "WiFi SSID"
+        default "YOUR_WIFI_SSID"
+
+    config NETWORK_WIFI_PASSWORD
+        string "WiFi Password"
+        default "YOUR_WIFI_PASSWORD"
+
+    config NETWORK_WIFI_MAXIMUM_RETRY
+        int "Maximum WiFi reconnection attempts"
+        default 5
+        range 0 20
+
+endmenu

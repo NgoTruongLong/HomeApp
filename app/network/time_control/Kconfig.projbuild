@@ -1,0 +1,7 @@
+menu "Time Configuration"
+
+    config NETWORK_SNTP_SERVER
+        string "SNTP server address"
+        default "pool.ntp.org"
+
+endmenu
