@@ -15,6 +15,7 @@ The board periodically reads and prints environmental data: temperature / humidi
 - **CO₂ sensor (SCD40)** — CO₂ (ppm), temperature, humidity on the shared I2C bus; a sensor hardware fault does **not** block the other sensors.
 - **WiFi STA** — connects using Kconfig settings, auto-reconnects.
 - **SNTP time sync** — ICT timezone (UTC+7).
+- **ST7735 1.8" LCD (128x160)** — color display with a polished UI: large live clock, date, and per-sensor rows with 16x16 icons (thermometer, drop, gauge, cloud, particles). CO₂ value/icon is color-coded by level (green/yellow/red). Runs on SPI2 (SCLK=GPIO12, MOSI=GPIO11, CS=GPIO10, DC=GPIO9, RST=GPIO8, BL=GPIO7 — configurable in `screen_control.c`).
 
 > [!NOTE]
 > All sensor drivers are **hand-written** (no managed components), each placed in its own module folder.
@@ -58,6 +59,7 @@ HomeApp
     │   ├── env_sensor/         # AHT20 + BMP280 driver (hand-written)
     │   ├── pms7003/            # PMS7003 driver (hand-written)
     │   └── scd40/              # SCD40 driver (hand-written)
+    ├── screen/                 # ST7735 128x160 LCD UI (icons + clock)
     └── network/
         ├── wifi_control/       # WiFi STA + reconnect
         └── time_control/       # SNTP, TZ ICT-7

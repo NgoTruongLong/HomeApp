@@ -1,17 +1,15 @@
-#ifndef SENSOR_CONTROL
-#define SENSOR_CONTROL
+#ifndef SCREEN_CONTROL_H
+#define SCREEN_CONTROL_H
 
 #include "debug.h"
 #include "commons.h"
-#include "driver/i2c_master.h"
+
 /******************************* DEFINITIONS *******************************/
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/
-APP_RESULT sensor_init();
-APP_RESULT sensor_fire_event(task_msg_t *msg);
-APP_RESULT sensor_get_data(sensor_data_t *data);
+APP_RESULT screen_init();
 /******************************* DATA TYPES *******************************/
 
 /******************************* VARIABLES *******************************/
 
-#endif /* SENSOR_CONTROL */
+#endif /* SCREEN_CONTROL_H */

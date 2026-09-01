@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "sensor_control.h"
 #include "freertos/idf_additions.h"
 #include "env_sensor.h"
@@ -47,6 +48,12 @@ typedef struct {
 } sensor_t;
 /******************************* VARIABLES *******************************/
 static sensor_t sensor_control;
+
+/* Latest readings shared with other modules (e.g. screen_control).
+ * Protected by sensor_data_mutex. */
+static sensor_data_t sensor_shared_data;
+static SemaphoreHandle_t sensor_data_mutex = NULL;
+
 void sensor_task(void *arg);
 APP_RESULT sensor_aht20_bmp280_init();
 APP_RESULT sensor_pms7003_init();
@@ -72,6 +79,10 @@ APP_RESULT sensor_init() {
 
     ret = sensor_scd40_init();
     ASSERT_CRITICAL(ret == APP_OK, ret, ret);
+
+    // Mutex protecting the shared sensor data snapshot.
+    sensor_data_mutex = xSemaphoreCreateMutex();
+    ASSERT_CRITICAL(sensor_data_mutex != NULL, APP_ERROR, APP_ERROR);
 
     // create message queue for sensor data
     sensor_control.queue = xQueueCreate(10, sizeof(task_msg_t));
@@ -143,6 +154,14 @@ void sensor_task(void *arg) {
                 ret = env_sensor_read(&sensor_control.sensor, &sensor_control.reading);
                 ASSERT(ret == APP_OK, ret);
                 printf("%.2f°C  %.2f%%RH  %.2fhPa\n", sensor_control.reading.temperature, sensor_control.reading.humidity, sensor_control.reading.pressure);
+                if (ret == APP_OK) {
+                    xSemaphoreTake(sensor_data_mutex, portMAX_DELAY);
+                    sensor_shared_data.temperature = sensor_control.reading.temperature;
+                    sensor_shared_data.humidity    = sensor_control.reading.humidity;
+                    sensor_shared_data.pressure    = sensor_control.reading.pressure;
+                    sensor_shared_data.env_valid   = true;
+                    xSemaphoreGive(sensor_data_mutex);
+                }
                 break;
 
             case TASK_MSG_TYPE_PMS_READ:
@@ -171,6 +190,12 @@ void sensor_task(void *arg) {
                        sensor_control.pms_data.pm1_0_atm,
                        sensor_control.pms_data.pm2_5_atm,
                        sensor_control.pms_data.pm10_atm);
+                xSemaphoreTake(sensor_data_mutex, portMAX_DELAY);
+                sensor_shared_data.pm1_0_atm = sensor_control.pms_data.pm1_0_atm;
+                sensor_shared_data.pm2_5_atm = sensor_control.pms_data.pm2_5_atm;
+                sensor_shared_data.pm10_atm  = sensor_control.pms_data.pm10_atm;
+                sensor_shared_data.pms_valid = true;
+                xSemaphoreGive(sensor_data_mutex);
                 break;
 
             case TASK_MSG_TYPE_SCD40_READ:
@@ -185,6 +210,11 @@ void sensor_task(void *arg) {
                     ret = scd40_read_measurement(&sensor_control.scd40_cfg, &sensor_control.scd40_data);
                     if (ret != APP_OK) {
                         ESP_LOGE(THIS_MODULE_NAME, "Failed to read SCD40 data");
+                    } else {
+                        xSemaphoreTake(sensor_data_mutex, portMAX_DELAY);
+                        sensor_shared_data.co2        = sensor_control.scd40_data.co2;
+                        sensor_shared_data.scd40_valid = true;
+                        xSemaphoreGive(sensor_data_mutex);
                     }
                 }
                 break;
@@ -202,6 +232,22 @@ APP_RESULT sensor_fire_event(task_msg_t *msg) {
         ESP_LOGE(THIS_MODULE_NAME, "Failed to send message to sensor task");
         return APP_ERROR;
     }
+    return APP_OK;
+}
+
+APP_RESULT sensor_get_data(sensor_data_t *data) {
+    if (data == NULL) {
+        return APP_ERROR;
+    }
+
+    if (sensor_data_mutex == NULL) {
+        return APP_ERROR;
+    }
+
+    xSemaphoreTake(sensor_data_mutex, portMAX_DELAY);
+    *data = sensor_shared_data;
+    xSemaphoreGive(sensor_data_mutex);
+
     return APP_OK;
 }
 

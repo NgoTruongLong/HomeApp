@@ -76,3 +76,27 @@ void time_control_print_current_time() {
 
     printf("Current time: %s\n", time_buf);
 }
+
+APP_RESULT time_control_get_time_str(char *buf, size_t len, const char *fmt) {
+    if (buf == NULL || len == 0) {
+        return APP_ERROR;
+    }
+
+    time_t now;
+    struct tm timeinfo;
+
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
+    // If no format provided, use the default date+time format.
+    if (fmt == NULL) {
+        fmt = "%Y-%m-%d %H:%M:%S";
+    }
+
+    size_t written = strftime(buf, len, fmt, &timeinfo);
+    if (written == 0) {
+        return APP_ERROR;
+    }
+
+    return APP_OK;
+}

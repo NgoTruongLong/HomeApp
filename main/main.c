@@ -16,6 +16,7 @@
 #include "sensor_control.h"
 #include "wifi_control.h"
 #include "time_control.h"
+#include "screen_control.h"
 
 void app_main(void)
 {
@@ -36,6 +37,9 @@ void app_main(void)
     // vTaskDelay(pdMS_TO_TICKS(10000)); // Wait for a second before starting time sync
     
     ret = time_control_init();
+    ASSERT(ret == APP_OK, ret);
+
+    ret = screen_init();
     ASSERT(ret == APP_OK, ret);
     // sensor_task(NULL);
 }
