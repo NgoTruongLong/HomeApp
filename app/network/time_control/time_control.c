@@ -1,10 +1,7 @@
 #include "time_control.h"
 #include <string.h>
-#include <time.h>
-#include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_sntp.h"
 #include "esp_log.h"
 
 /******************************* DEFINITIONS *******************************/
@@ -16,11 +13,8 @@
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static void time_sync_notification_cb(struct timeval *tv);
 /******************************* DATA TYPES *******************************/
-typedef struct {
-    bool is_synced;
-} time_control_state_t;
 /******************************* VARIABLES *******************************/
-static time_control_state_t time_control;
+static time_control_t time_control;
 /******************************* FUNCTIONS IMPLEMENTATION *******************************/
 static void time_sync_notification_cb(struct timeval *tv) {
     ESP_LOGI(THIS_MODULE_NAME, "time synchronization event received");
@@ -37,6 +31,8 @@ APP_RESULT time_control_init() {
     // init sntp
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
     esp_sntp_setservername(0, CONFIG_NETWORK_SNTP_SERVER);
+    // sync every hour (3600000 ms) to avoid time drift
+    esp_sntp_set_sync_interval(3600000);
     esp_sntp_set_time_sync_notification_cb(time_sync_notification_cb);
     esp_sntp_init();
 
@@ -83,17 +79,15 @@ APP_RESULT time_control_get_time_str(char *buf, size_t len, const char *fmt) {
     }
 
     time_t now;
-    struct tm timeinfo;
-
     time(&now);
-    localtime_r(&now, &timeinfo);
+    localtime_r(&now, &time_control.current_time);
 
     // If no format provided, use the default date+time format.
     if (fmt == NULL) {
         fmt = "%Y-%m-%d %H:%M:%S";
     }
 
-    size_t written = strftime(buf, len, fmt, &timeinfo);
+    size_t written = strftime(buf, len, fmt, &time_control.current_time);
     if (written == 0) {
         return APP_ERROR;
     }
