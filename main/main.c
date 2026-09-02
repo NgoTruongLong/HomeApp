@@ -17,6 +17,7 @@
 #include "wifi_control.h"
 #include "time_control.h"
 #include "screen_control.h"
+#include "audio_control.h"
 
 void app_main(void)
 {
@@ -40,6 +41,9 @@ void app_main(void)
     ASSERT(ret == APP_OK, ret);
 
     ret = screen_init();
+    ASSERT(ret == APP_OK, ret);
+
+    ret = audio_init();
     ASSERT(ret == APP_OK, ret);
     // sensor_task(NULL);
 }

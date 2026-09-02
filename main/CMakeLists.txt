@@ -5,8 +5,9 @@ list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/sensor_control")
 list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/network")
 list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/network/time_control")
 list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/screen")
+list(APPEND MAIN_DIRS "${PROJECT_DIR}/app/audio")
 
 idf_component_register(SRCS "main.c"
                        PRIV_REQUIRES spi_flash
-                       REQUIRES network time_control screen "driver"
+                       REQUIRES network time_control screen audio "driver"
                        INCLUDE_DIRS "${MAIN_DIRS}")

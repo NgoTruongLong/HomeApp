@@ -4,4 +4,7 @@
 #define SENSOR_TASK_PRIOR       (5)
 #define SENSOR_TASK_STACK_SIZE  (4096 * 2)
 
+#define AUDIO_TASK_PRIOR        (4)
+#define AUDIO_TASK_STACK_SIZE   (4096 * 2)
+
 #endif /* TASK_DEFINE */
