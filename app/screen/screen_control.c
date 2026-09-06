@@ -41,7 +41,7 @@
 #define THIS_MODULE_NAME "screen_control"
 
 /* --- Hardware pins (adjust to your wiring) --- */
-#define SCREEN_SPI_HOST         (SPI2_HOST)
+#define SCREEN_SPI_HOST         (SPI3_HOST)
 #define SCREEN_SPI_SCLK_PIN     (GPIO_NUM_12)
 #define SCREEN_SPI_MOSI_PIN     (GPIO_NUM_11)
 #define SCREEN_SPI_CS_PIN       (GPIO_NUM_10)

@@ -6,7 +6,7 @@
 #include "driver/i2s_std.h"
 
 /******************************* DEFINITIONS *******************************/
-#define SPEAKER_SAMPLE_RATE (16000)
+#define SPEAKER_SAMPLE_RATE (44100)
 #define MICRO_SAMPLE_RATE   (16000)
 
 #define I2S_BUFFER_SIZE  (1600)

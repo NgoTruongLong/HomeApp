@@ -18,6 +18,7 @@
 #include "time_control.h"
 #include "screen_control.h"
 #include "audio_control.h"
+#include "micro_sdcard_control.h"
 
 void app_main(void)
 {
@@ -43,7 +44,10 @@ void app_main(void)
     ret = screen_init();
     ASSERT(ret == APP_OK, ret);
 
+    /* SD card must be mounted before the audio task streams music from it. */
+    ret = micro_sdcard_init();
+    ASSERT(ret == APP_OK, ret);
+
     ret = audio_init();
     ASSERT(ret == APP_OK, ret);
-    // sensor_task(NULL);
 }
