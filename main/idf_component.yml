@@ -14,4 +14,8 @@ dependencies:
   #   # `public` flag doesn't have an effect dependencies of the `main` component.
   #   # All dependencies of `main` are public by default.
   #   public: true
-  teriyakigod/esp_lcd_st7735: ^0.0.1
+  ## Màn hình ILI9488 3.5" + LVGL + touch XPT2046 (port từ smartClock)
+  lvgl/lvgl: ^8.4.0
+  atanisoft/esp_lcd_ili9488: ^1.1.0
+  atanisoft/esp_lcd_touch_xpt2046: ^1.0.5
+  espressif/esp_lcd_touch: ^1.2.1

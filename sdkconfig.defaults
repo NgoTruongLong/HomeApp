@@ -2,3 +2,22 @@
 # Fixes: "A stack overflow in task Tmr Svc has been detected"
 # caused by ESP_LOGI() + xTimerChangePeriod()/xTimerStart() in pms_timer_cb
 CONFIG_FREERTOS_TIMER_TASK_STACK_DEPTH=4096
+
+# ======================== LVGL (ILI9488 3.5 inch display) ========================
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_DEPTH=16
+CONFIG_LV_MEM_SIZE_KILOBYTES=48
+# Fonts used by the HomeApp dashboard UI
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_16=y
+CONFIG_LV_FONT_MONTSERRAT_20=y
+CONFIG_LV_FONT_MONTSERRAT_36=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+
+# ======================== Partition table (custom) ========================
+# LVGL app binary > 1 MB -> use a custom partition that gives ~1.8 MB to app
+# (fits the 2 MB flash of the HomeApp board). See partitions.csv.
+CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="2MB"
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"

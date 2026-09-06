@@ -223,6 +223,7 @@ void audio_task(void *arg)
                 }
             }
         }
+        vTaskDelay(pdMS_TO_TICKS(2000));  /* wait 1s before restarting the playlist */
     }
     
 

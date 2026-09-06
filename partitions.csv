@@ -1,0 +1,6 @@
+# ESP-IDF Partition Table for HomeApp (2 MB flash, app single partition)
+# App duoc lam lon hon 1 MB mac dinh vi code LVGL + ILI9488 lon hon.
+# Name,     Type, SubType,  Offset,   Size
+nvs,        data, nvs,      0x9000,   0x6000
+phy_init,   data, phy,      0xf000,   0x1000
+factory,    app,  factory,  0x10000,  0x1D0000
