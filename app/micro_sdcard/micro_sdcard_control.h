@@ -5,6 +5,8 @@
 #include "commons.h"
 
 /******************************* DEFINITIONS *******************************/
+#define MOUNT_POINT "/sdcard"   /* mount point for the SD card filesystem */
+
 #define PIN_NUM_MOSI    (GPIO_NUM_39)
 #define PIN_NUM_MISO    (GPIO_NUM_38)
 #define PIN_NUM_CLK     (GPIO_NUM_40)

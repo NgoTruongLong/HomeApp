@@ -19,3 +19,6 @@ dependencies:
   atanisoft/esp_lcd_ili9488: ^1.1.0
   atanisoft/esp_lcd_touch_xpt2046: ^1.0.5
   espressif/esp_lcd_touch: ^1.2.1
+  ## Xiaozhi AI voice chat: WebSocket client + Opus codec
+  espressif/esp_websocket_client: ^1.6.1
+  78/esp-opus: ^1.0.4

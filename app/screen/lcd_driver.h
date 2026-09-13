@@ -44,7 +44,8 @@
 #define LCD_V_RES             (320)
 
 /* --- Độ sâu buffer --- */
-#define LCD_DRAW_BUF_LINES    (20)   /* số dòng LVGL vẽ 1 lần (partial flush) */
+/* 10 dòng/buffer (2 buffer): tiết kiệm ~19 KB vùng DMA để dành cho I2S (MAX98357A). */
+#define LCD_DRAW_BUF_LINES    (10)   /* số dòng LVGL vẽ 1 lần (partial flush) */
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 APP_RESULT lcd_driver_init(void);

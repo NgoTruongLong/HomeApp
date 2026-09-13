@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 #include "debug.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 #include <dirent.h>
+#include "commons.h"
 
 /******************************* DEFINITIONS *******************************/
 #define THIS_MODULE_NAME "micro_sdcard_control"
-#define MOUNT_POINT "/sdcard"   /* mount point for the SD card filesystem */
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static bool micro_sdcard_is_wav(const char *file_name, size_t len);
 /******************************* DATA TYPES *******************************/
@@ -37,7 +38,10 @@ APP_RESULT micro_sdcard_init() {
 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     host.unaligned_multi_block_rw_max_chunk_size = 8;
-    host.max_freq_khz = 10000; // Set the maximum frequency to 40 MHz
+    /* 10 MHz gây ESP_ERR_TIMEOUT (0x107) khi stream WAV liên tục trên dây dupont.
+     * Giảm còn 4 MHz cho ổn định (băng thông vẫn thừa so với ~88 KB/s của WAV
+     * 44.1 kHz mono 16-bit). */
+    host.max_freq_khz = 4000;
 
     // config SPI bus pins for the SD card
     spi_bus_config_t bus_cfg = {
@@ -46,7 +50,8 @@ APP_RESULT micro_sdcard_init() {
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 4000,
+        /* Phải >= sector_size * unaligned_multi_block_rw_max_chunk_size = 512*8 = 4096. */
+        .max_transfer_sz = 8192,
     };
 
     ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
@@ -73,9 +78,13 @@ APP_RESULT micro_sdcard_init() {
     ESP_LOGI(THIS_MODULE_NAME, "Filesystem mounted");
     sdcard_control.is_initialized = true;
     sdcard_control.is_mounted = true;
+    ESP_LOGI(THIS_MODULE_NAME, "after mount: heap free=%u min=%u",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT));
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
 
+#if 0
     //scan the SD card for .wav files and populate the playlist
     ret = micro_sdcard_list_music_files(MOUNT_POINT, &sdcard_control.playlist);
     ASSERT_CRITICAL(ret == APP_OK, ret, APP_ERROR);
@@ -83,6 +92,7 @@ APP_RESULT micro_sdcard_init() {
     for (int i = 0; i < sdcard_control.playlist.count; i++) {
         ESP_LOGI(THIS_MODULE_NAME, "Found song: %s", sdcard_control.playlist.songs[i]);
     }
+#endif
 
 #if 0
     size_t len = 0;
@@ -198,6 +208,10 @@ APP_RESULT micro_sdcard_list_music_files(const char* directory_path, playlist_t 
     if (playlist->count == 0) {
         ESP_LOGW(THIS_MODULE_NAME, "Cannot found any .wav file in %s", directory_path);
     }
+
+    // update the global sdcard_control playlist with the found songs
+    memcpy(&sdcard_control.playlist, playlist, sizeof(sdcard_control.playlist));
+    
     return ret;
 }
 

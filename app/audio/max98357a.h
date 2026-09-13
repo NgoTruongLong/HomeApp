@@ -1,6 +1,7 @@
 #ifndef MAX98357A_H
 #define MAX98357A_H
 
+
 #include "debug.h"
 #include "commons.h"
 #include "driver/i2s_std.h"
@@ -14,10 +15,12 @@
 #define TEST_AUDIO_SHARED_MEM_SIZE  (16000)
 
 // I2S PIN TX (MAX98357A)
+// LUU Y: ESP32-S3 + Octal PSRAM (N16R8) chiem GPIO33..37, nen loa KHONG duoc
+// dung 35/36/37 nua. Da chuyen sang 16/42/2.
 #define I2S_SPEAKER_MCLK                 (I2S_GPIO_UNUSED)
-#define I2S_SPEAKER_BCLK                 (GPIO_NUM_36)
-#define I2S_SPEAKER_WS                   (GPIO_NUM_37)   // LCR
-#define I2S_SPEAKER_DOUT                 (GPIO_NUM_35)
+#define I2S_SPEAKER_BCLK                 (GPIO_NUM_16)
+#define I2S_SPEAKER_WS                   (GPIO_NUM_42)   // LCR
+#define I2S_SPEAKER_DOUT                 (GPIO_NUM_2)
 #define I2S_SPEAKER_DIN                  (I2S_GPIO_UNUSED)
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/

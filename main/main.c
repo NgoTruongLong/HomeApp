@@ -19,6 +19,7 @@
 #include "screen_control.h"
 #include "audio_control.h"
 #include "micro_sdcard_control.h"
+#include "voice_chat.h"
 
 void app_main(void)
 {
@@ -30,17 +31,16 @@ void app_main(void)
     ret = sensor_init();
     ASSERT(ret == APP_OK, ret);
 
+    /* WiFi: khởi tạo STA, nếu có mạng đã lưu thì tự kết nối (không block). */
     ret = wifi_control_init();
     ASSERT(ret == APP_OK, ret);
 
-    ret = wifi_control_wait_connected(15000);
-    ASSERT(ret == APP_OK, ret);
-
-    // vTaskDelay(pdMS_TO_TICKS(10000)); // Wait for a second before starting time sync
-    
+    /* SNTP non-blocking: task nền sẽ đồng bộ giờ khi có WiFi.
+       Nếu chưa có mạng, người dùng chọn & kết nối trên màn hình (Phase 3). */
     ret = time_control_init();
     ASSERT(ret == APP_OK, ret);
 
+    /* UI khởi động ngay để thao tác kể cả khi chưa có mạng. */
     ret = screen_init();
     ASSERT(ret == APP_OK, ret);
 
@@ -48,6 +48,13 @@ void app_main(void)
     ret = micro_sdcard_init();
     ASSERT(ret == APP_OK, ret);
 
+#if 1
     ret = audio_init();
     ASSERT(ret == APP_OK, ret);
+#endif
+
+    /* Voice chat voi Xiaozhi AI (INMP441 + Opus + WebSocket). Can audio + WiFi. */
+    ret = voice_chat_init();
+    ASSERT(ret == APP_OK, ret);
+
 }

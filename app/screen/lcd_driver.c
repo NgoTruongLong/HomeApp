@@ -30,7 +30,7 @@
 /******************************* DEFINITIONS *******************************/
 #define THIS_MODULE_NAME "lcd_driver"
 
-#define LCD_PCLK_HZ            (40 * 1000 * 1000)  /* 40 MHz */
+#define LCD_PCLK_HZ            (20 * 1000 * 1000)  /* 40 MHz */
 #define LCD_SPI_QUEUE_DEPTH    (10)
 #define LCD_SPI_MAX_TRANSFER_SZ (LCD_H_RES * LCD_DRAW_BUF_LINES * 3)  /* ~28.8 KB */
 
@@ -219,7 +219,7 @@ static APP_RESULT lcd_init_touch(void)
         .rst_gpio_num     = GPIO_NUM_NC,
         .int_gpio_num     = GPIO_NUM_NC,
         .levels           = { .reset = 0, .interrupt = 0 },
-        .flags            = { .swap_xy = 1, .mirror_x = 0, .mirror_y = 0 },
+        .flags            = { .swap_xy = 1, .mirror_x = 1, .mirror_y = 1 },
         .process_coordinates = NULL,
         .interrupt_callback = NULL,
         .user_data        = NULL,

@@ -13,7 +13,7 @@
 
 /******************************* DEFINITIONS *******************************/
 #define LVGL_TASK_NAME          "LVGLTask"
-#define LVGL_TASK_STACK_SIZE    (4 * 1024)
+#define LVGL_TASK_STACK_SIZE    (8 * 1024)   /* tăng từ 4KB: task này còn gọi FatFs khi quét SD */
 #define LVGL_TASK_PRIORITY      (2)
 #define LVGL_TASK_MAX_DELAY_MS  (30)
 #define LVGL_TASK_MIN_DELAY_MS  (1)

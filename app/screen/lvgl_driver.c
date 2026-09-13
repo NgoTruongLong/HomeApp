@@ -17,6 +17,7 @@
 #include "freertos/semphr.h"
 #include "esp_timer.h"
 #include "esp_heap_caps.h"
+#include "esp_err.h"
 #include "esp_log.h"
 
 #include "esp_lcd_panel_ops.h"
@@ -33,7 +34,7 @@
 #define TOUCH_Y_RES_MIN (16)
 #define TOUCH_Y_RES_MAX (298)
 
-#define TOUCH_DEBUG_PRINT (0)  /* bật = in toạ độ touch ra console */
+#define TOUCH_DEBUG_PRINT (1)  /* bật = in toạ độ touch ra console */
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static void lvgl_task(void *arg);
@@ -166,7 +167,14 @@ static void lvgl_touch_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data)
         return;
     }
 
-    esp_lcd_touch_read_data(tp);
+    esp_err_t err = esp_lcd_touch_read_data(tp);
+    if (err != ESP_OK) {
+#if TOUCH_DEBUG_PRINT
+        ESP_LOGW(THIS_MODULE_NAME, "touch read error: %s", esp_err_to_name(err));
+#endif
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
 
     esp_lcd_touch_point_data_t point = {0};
     uint8_t cnt = 0;
@@ -177,7 +185,7 @@ static void lvgl_touch_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data)
         data->point.y = mapped_y;
         data->state   = LV_INDEV_STATE_PRESSED;
 #if TOUCH_DEBUG_PRINT
-        printf("Touch raw(%d,%d) -> (%d,%d)\r\n", point.x, point.y, mapped_x, mapped_y);
+        printf("Touch raw(%d,%d) z=%d -> (%d,%d)\r\n", point.x, point.y, point.strength, mapped_x, mapped_y);
 #endif
     } else {
         data->state = LV_INDEV_STATE_RELEASED;

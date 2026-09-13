@@ -8,16 +8,34 @@
 #define THIS_MODULE_NAME "time_control"
 
 #define TIME_ZONE              "ICT-7"              /* Asia/Ho_Chi_Minh (UTC+7) */
-#define TIME_SYNC_MAX_RETRY    (50)                 /* 50 * 500ms = 25s */
-#define TIME_SYNC_RETRY_DELAY  (500)
+#define TIME_SYNC_RETRY_MS     (3000)               /* thử lại SNTP mỗi 3s khi chưa sync */
+#define TIME_SYNC_TASK_STACK   (4096)
+#define TIME_SYNC_TASK_PRIO    (1)
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static void time_sync_notification_cb(struct timeval *tv);
+static void time_sync_task(void *arg);
 /******************************* DATA TYPES *******************************/
 /******************************* VARIABLES *******************************/
 static time_control_t time_control;
 /******************************* FUNCTIONS IMPLEMENTATION *******************************/
 static void time_sync_notification_cb(struct timeval *tv) {
+    (void)tv;
+    /* Đồng bộ thành công (có thể xảy ra muộn, sau khi người dùng nối WiFi). */
+    time_control.is_synced = true;
     ESP_LOGI(THIS_MODULE_NAME, "time synchronization event received");
+}
+
+/* Task nền: "đánh thức" SNTP liên tục tới khi đồng bộ xong.
+   Cần vì WiFi có thể được kết nối muộn (qua màn hình) sau khi boot. */
+static void time_sync_task(void *arg) {
+    (void)arg;
+    while (!time_control.is_synced) {
+        esp_sntp_restart();
+        vTaskDelay(pdMS_TO_TICKS(TIME_SYNC_RETRY_MS));
+    }
+    ESP_LOGI(THIS_MODULE_NAME, "time synchronized with server %s", CONFIG_NETWORK_SNTP_SERVER);
+    time_control_print_current_time();
+    vTaskDelete(NULL);
 }
 
 APP_RESULT time_control_init() {
@@ -36,24 +54,16 @@ APP_RESULT time_control_init() {
     esp_sntp_set_time_sync_notification_cb(time_sync_notification_cb);
     esp_sntp_init();
 
-    // wait for time sync
-    uint8_t retry = 0;
-    sntp_sync_status_t sync_status = esp_sntp_get_sync_status();
-    while (sync_status == SNTP_SYNC_STATUS_RESET && retry < TIME_SYNC_MAX_RETRY) {
-        vTaskDelay(pdMS_TO_TICKS(TIME_SYNC_RETRY_DELAY));
-        retry++;
-        sync_status = esp_sntp_get_sync_status();
-    }
-
-    if (sync_status == SNTP_SYNC_STATUS_RESET) {
-        ESP_LOGW(THIS_MODULE_NAME, "time sync failed after %d retries", retry);
+    /* Task nền đồng bộ giờ - KHÔNG block boot.
+       is_synced sẽ được set true bởi callback khi SNTP thành công. */
+    BaseType_t task_ok = xTaskCreate(time_sync_task, "time_sync", TIME_SYNC_TASK_STACK,
+                                     NULL, TIME_SYNC_TASK_PRIO, NULL);
+    if (task_ok != pdPASS) {
+        ESP_LOGE(THIS_MODULE_NAME, "failed to create time sync task");
         return APP_ERROR;
     }
 
-    time_control.is_synced = true;
-    ESP_LOGI(THIS_MODULE_NAME, "time synchronized with server %s", CONFIG_NETWORK_SNTP_SERVER);
-    time_control_print_current_time();
-
+    ESP_LOGI(THIS_MODULE_NAME, "SNTP started (async), waiting for network...");
     return ret;
 }
 
