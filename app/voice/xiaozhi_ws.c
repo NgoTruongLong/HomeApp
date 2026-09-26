@@ -1,4 +1,5 @@
 #include "xiaozhi_ws.h"
+#include "debug.h"
 #include "esp_websocket_client.h"
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
@@ -13,10 +14,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "portmacro.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "xiaozhi_mcp.h"
 /******************************* DEFINITIONS *******************************/
 #define THIS_MODULE_NAME   "xiaozhi_ws"
 
@@ -31,6 +33,7 @@
 #define XZ_UA_MAX           (64)
 #define XZ_HEADERS_MAX      (512)
 #define XZ_OTA_BUF_SIZE     (1024)
+#define XZ_SESSION_ID_SIZE  (40)
 
 #define XZ_FRAME_TYPE_AUDIO (0)
 #define XZ_FRAME_HDR_SIZE   (4)
@@ -55,6 +58,7 @@ static char       s_device_id[XZ_DEVID_MAX];
 static char       s_uuid[XZ_UUID_MAX];
 static char       s_user_agent[XZ_UA_MAX];
 static char       s_headers[XZ_HEADERS_MAX];
+static char       s_session_id[XZ_SESSION_ID_SIZE];
 
 static xz_audio_cb_t s_audio_cb;
 static xz_msg_cb_t   s_msg_cb;
@@ -84,8 +88,20 @@ void xz_set_callbacks(xz_audio_cb_t audio_cb, xz_msg_cb_t msg_cb)
     s_msg_cb   = msg_cb;
 }
 
-bool xz_is_connected(void) { return s_connected; }
-bool xz_is_ready(void)     { return s_ready; }
+/* Trạng thái THẬT của link. KHÔNG dùng cờ `s_connected` trần: khi server đóng
+ * hoặc TCP bị half-open, cờ đó còn true trong lúc client đã mất kết nối ->
+ * xz_send_audio() vẫn gọi send_bin() mỗi frame 60 ms và spam
+ *   E websocket_client: Websocket client is not connected
+ *   W xiaozhi_ws: send_audio failed (-1), opus=...
+ * esp_websocket_client_is_connected() phản ánh đúng state nội bộ của client. */
+static bool xz_link_alive(void)
+{
+    return (s_ws != NULL) && s_connected &&
+           esp_websocket_client_is_connected(s_ws);
+}
+
+bool xz_is_connected(void) { return xz_link_alive(); }
+bool xz_is_ready(void)     { return s_ready && xz_link_alive(); }
 
 APP_RESULT xz_init(void)
 {
@@ -95,7 +111,7 @@ APP_RESULT xz_init(void)
     s_ws        = NULL;
     s_connected = false;
     s_ready     = false;
-
+    s_session_id[0] = '\0';
     if (xz_prepare_device_info() != APP_OK) {
         return APP_ERROR;
     }
@@ -293,12 +309,43 @@ static APP_RESULT xz_activate(void)
 /******************************* WEBSOCKET *******************************/
 static void xz_send_hello(void)
 {
+    /* PHAI la JSON hop le: ban truoc thieu dau '}' dong object goc va thua
+     * dau phay cuoi chuoi -> server tra ngay
+     *   {"type":"error","message":"Error occurred while processing message"}
+     * sau khi nhan hello. */
     const char *hello =
         "{\"type\":\"hello\",\"version\":3,\"transport\":\"websocket\","
         "\"audio_params\":{\"format\":\"opus\",\"sample_rate\":24000,"
-        "\"channels\":1,\"frame_duration\":60}}";
-    ESP_LOGI(THIS_MODULE_NAME, "Sending hello");
+        "\"channels\":1,\"frame_duration\":60},"
+        "\"features\":{\"mcp\":true}}";
+    ESP_LOGI(THIS_MODULE_NAME, "Sending hello: %s", hello);
     esp_websocket_client_send_text(s_ws, hello, strlen(hello), portMAX_DELAY);
+}
+
+APP_RESULT xz_mcp_send_payload(const char* payload) {
+    APP_RESULT ret = APP_OK;
+    char * msg;
+    size_t total_size;
+    int    n;
+
+    if (payload == NULL || s_ws == NULL) {
+        return APP_ERROR;
+    }
+
+    /* JSON phai hop le va "payload" phai la OBJECT (khop voi luc parse trong
+     * xz_handle_text + dung protocol xiaozhi). Ban truoc: thieu {} bao ngoai,
+     * de payload trong ngoac kep (thanh string) va gui sai do dai
+     * (total_size thay vi strlen) -> server bao loi khi nhan message MCP. */
+    total_size = sizeof(s_session_id) + strlen(payload) + 64;
+    msg = (char *)malloc(total_size);
+    ASSERT_CRITICAL(msg != NULL, APP_ERROR, APP_ERROR);
+
+    n = snprintf(msg, total_size,
+                 "{\"session_id\":\"%s\",\"type\":\"mcp\",\"payload\":%s}",
+                 s_session_id, payload);
+    ret = esp_websocket_client_send_text(s_ws, msg, n, portMAX_DELAY);
+    free(msg);
+    return ret >= 0 ? APP_OK : APP_ERROR;
 }
 
 static void xz_ws_event(void *arg, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -347,7 +394,7 @@ static void xz_ws_event(void *arg, esp_event_base_t base, int32_t event_id, void
 static void xz_handle_text(const char *json_str)
 {
     cJSON *root = cJSON_Parse(json_str);
-    cJSON *type, *text, *state;
+    cJSON *type, *text, *state, *s_id;
 
     if (root == NULL) {
         ESP_LOGW(THIS_MODULE_NAME, "JSON parse failed: %s", json_str);
@@ -365,12 +412,24 @@ static void xz_handle_text(const char *json_str)
 
     if (strcmp(type->valuestring, "hello") == 0) {
         s_ready = true;
+        // save current session id
+        s_id = cJSON_GetObjectItem(root, "session_id");
+        if (cJSON_IsString(s_id)) {
+            xz_set_str(s_session_id, sizeof(s_session_id), s_id->valuestring);
+        }
     } else if (strcmp(type->valuestring, "goodbye") == 0) {
         s_ready = false;
     } else if (strcmp(type->valuestring, "tts") == 0) {
         if (!cJSON_IsString(state)) {
             state = NULL;
         }
+    } else if (strcmp(type->valuestring, "mcp") == 0) {
+        cJSON *payload = cJSON_GetObjectItem(root, "payload");
+        if (cJSON_IsObject(payload)) {
+            mcp_handle_message(payload);
+        }
+        cJSON_Delete(root);
+        return; 
     }
 
     if (s_msg_cb != NULL) {
@@ -466,7 +525,7 @@ void xz_disconnect(void)
 APP_RESULT xz_send_listen_start(void)
 {
     const char *msg = "{\"type\":\"listen\",\"state\":\"start\",\"mode\":\"auto\"}";
-    if (!s_connected) return APP_ERROR;
+    if (!xz_link_alive()) return APP_ERROR;
     esp_websocket_client_send_text(s_ws, msg, strlen(msg), portMAX_DELAY);
     return APP_OK;
 }
@@ -474,7 +533,7 @@ APP_RESULT xz_send_listen_start(void)
 APP_RESULT xz_send_listen_stop(void)
 {
     const char *msg = "{\"type\":\"listen\",\"state\":\"stop\"}";
-    if (!s_connected) return APP_ERROR;
+    if (!xz_link_alive()) return APP_ERROR;
     esp_websocket_client_send_text(s_ws, msg, strlen(msg), portMAX_DELAY);
     return APP_OK;
 }
@@ -486,7 +545,7 @@ APP_RESULT xz_send_audio(const uint8_t *opus, size_t len)
     size_t total;
     int ret;
 
-    if (!s_connected || opus == NULL || len == 0 || len > 0xFFFF) {
+    if (!xz_link_alive() || opus == NULL || len == 0 || len > 0xFFFF) {
         return APP_ERROR;
     }
     total = sizeof(xz_bin_header_t) + len;
@@ -503,8 +562,22 @@ APP_RESULT xz_send_audio(const uint8_t *opus, size_t len)
     ret = esp_websocket_client_send_bin(s_ws, (const char *)packet, total, portMAX_DELAY);
     free(packet);
     if (ret < 0) {
-        ESP_LOGW(THIS_MODULE_NAME, "send_audio failed (%d), opus=%u B",
-                 ret, (unsigned)len);
+        /* Chỉ coi là MẤT KẾT NỐI khi client thực sự báo disconnected; lỗi tạm
+         * thời (buffer đầy...) không được phá phiên. Khi mất kết nối thật thì
+         * hạ cờ ngay để mic_task dừng gửi và chờ esp_websocket_client tự
+         * reconnect (reconnect_timeout_ms). */
+        if (s_ws == NULL || !esp_websocket_client_is_connected(s_ws)) {
+            s_connected = false;
+            s_ready     = false;
+        }
+        /* Throttle: tối đa 1 dòng log / 2 s (tránh spam mỗi 60 ms). */
+        static TickType_t s_last_warn_tick = 0;
+        TickType_t now_tick = xTaskGetTickCount();
+        if ((now_tick - s_last_warn_tick) >= pdMS_TO_TICKS(2000)) {
+            s_last_warn_tick = now_tick;
+            ESP_LOGW(THIS_MODULE_NAME, "send_audio failed (%d), opus=%u B",
+                     ret, (unsigned)len);
+        }
         return APP_ERROR;
     }
     return APP_OK;

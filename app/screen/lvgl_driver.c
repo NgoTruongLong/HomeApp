@@ -28,13 +28,31 @@
 
 #define LVGL_DRAW_BUF_PIXELS  (LCD_H_RES * LCD_DRAW_BUF_LINES)   /* 480*20 */
 
-/* Mapping toạ độ touch -> màn hình (hiệu chỉnh theo smartClock). */
-#define TOUCH_X_RES_MIN (15)
-#define TOUCH_X_RES_MAX (454)
-#define TOUCH_Y_RES_MIN (16)
-#define TOUCH_Y_RES_MAX (298)
+/* ---------------------------------------------------------------------------
+ * Hiệu chuẩn touch -> màn hình
+ * ---------------------------------------------------------------------------
+ * atanisoft XPT2046 đã tự quy đổi ADC -> 0..x_max/y_max, sau đó esp_lcd_touch
+ * áp mirror + swap_xy. Vì vậy "raw" mà ta đọc được đã nằm trong hệ toạ độ màn
+ * hình (x: 0..LCD_H_RES, y: 0..LCD_V_RES) NHƯNG panel thực tế chỉ trả về một
+ * khoảng HẸP hơn rất nhiều -> phải map lại khoảng raw thực đo -> full màn hình.
+ *
+ *   MIN = raw tại cạnh TRÊN/TRÁI, MAX = raw tại cạnh DƯỚI/PHẢI.
+ *
+ * Cách hiệu chuẩn: bật TOUCH_RANGE_DEBUG, chạm/kéo lần lượt ra 4 góc màn hình,
+ * đọc dòng "Touch RANGE x[..] y[..]" trong log rồi điền min/max vào 4 macro.
+ *
+ * Số đo thực tế trên panel này (2026-09-24, chạm 4 góc):
+ *     Touch RANGE x[26..443] y[12..122]
+ * -> trục X bình thường, nhưng trục Y chỉ trả về 110 mức cho 320 px (~2.9 px/
+ *    mức) nên bộ hằng số cũ 16..298 chỉ chạm được ~1/3 màn hình theo chiều dọc.
+ */
+#define TOUCH_X_RES_MIN (26)
+#define TOUCH_X_RES_MAX (443)
+#define TOUCH_Y_RES_MIN (12)
+#define TOUCH_Y_RES_MAX (122)
 
 #define TOUCH_DEBUG_PRINT (1)  /* bật = in toạ độ touch ra console */
+#define TOUCH_RANGE_DEBUG (1)  /* bật = in khoảng raw min/max đã gặp (hiệu chuẩn) */
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static void lvgl_task(void *arg);
@@ -52,6 +70,12 @@ static lv_disp_drv_t s_disp_drv;
 static lv_disp_t *s_disp = NULL;
 static lv_indev_drv_t s_indev_drv;
 static SemaphoreHandle_t s_lvgl_mutex = NULL;
+
+#if TOUCH_RANGE_DEBUG
+/* Khoảng raw (đã đổi trục) lớn nhất đã gặp - dùng để hiệu chuẩn panel. */
+static uint16_t s_raw_x_min = 0xFFFF, s_raw_x_max = 0;
+static uint16_t s_raw_y_min = 0xFFFF, s_raw_y_max = 0;
+#endif
 
 /******************************* FUNCTIONS IMPLEMENTATION *******************************/
 APP_RESULT lvgl_driver_init(void)
@@ -179,6 +203,18 @@ static void lvgl_touch_read_cb(lv_indev_drv_t *drv, lv_indev_data_t *data)
     esp_lcd_touch_point_data_t point = {0};
     uint8_t cnt = 0;
     if (esp_lcd_touch_get_data(tp, &point, &cnt, 1) == ESP_OK && cnt > 0) {
+#if TOUCH_RANGE_DEBUG
+        /* Theo dõi biên raw để hiệu chuẩn: chạm 4 góc rồi đọc log. */
+        bool new_extreme = false;
+        if (point.x < s_raw_x_min) { s_raw_x_min = point.x; new_extreme = true; }
+        if (point.x > s_raw_x_max) { s_raw_x_max = point.x; new_extreme = true; }
+        if (point.y < s_raw_y_min) { s_raw_y_min = point.y; new_extreme = true; }
+        if (point.y > s_raw_y_max) { s_raw_y_max = point.y; new_extreme = true; }
+        if (new_extreme) {
+            printf("Touch RANGE x[%d..%d] y[%d..%d]\r\n",
+                   s_raw_x_min, s_raw_x_max, s_raw_y_min, s_raw_y_max);
+        }
+#endif
         uint16_t mapped_x = lvgl_map_value(point.x, TOUCH_X_RES_MIN, TOUCH_X_RES_MAX, 0, LCD_H_RES - 1);
         uint16_t mapped_y = lvgl_map_value(point.y, TOUCH_Y_RES_MIN, TOUCH_Y_RES_MAX, 0, LCD_V_RES - 1);
         data->point.x = mapped_x;

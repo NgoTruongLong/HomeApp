@@ -46,12 +46,8 @@
 #define LCD_MIRROR_X           (1)
 #define LCD_MIRROR_Y           (0)
 
-/* --- Touch: thông số mapping (kinh nghiệm từ smartClock, chỉnh nếu lệch) --- */
+/* --- Touch --- */
 #define TOUCH_CLOCK_HZ         (1 * 1000 * 1000)
-#define TOUCH_X_RES_MIN        (15)
-#define TOUCH_X_RES_MAX        (454)
-#define TOUCH_Y_RES_MIN        (16)
-#define TOUCH_Y_RES_MAX        (298)
 
 /******************************* FUNCTIONS PROTOTYPE *******************************/
 static APP_RESULT lcd_init_backlight(void);

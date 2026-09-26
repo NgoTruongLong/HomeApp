@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include <string.h>
 #include <stdio.h>
+#include "xiaozhi_mcp.h"
 
 /******************************* DEFINITIONS *******************************/
 #define THIS_MODULE_NAME   "voice_chat"
@@ -324,6 +325,14 @@ static void voice_task(void *arg)
                     s_enabled = false;
                     s_mic_muted = false;
                 }
+            } else if (!xz_is_connected()) {
+                /* Link đứt (server đóng / rớt mạng). esp_websocket_client sẽ tự
+                 * reconnect; ở đây chỉ dừng mọi thứ đang chờ + báo UI.
+                 * KHÔNG gọi xz_disconnect() để không phá cơ chế auto-reconnect. */
+                s_need_listen_start = false;
+                if (voice_chat_get_state() != VOICE_STATE_CONNECTING) {
+                    voice_set_state(VOICE_STATE_CONNECTING);
+                }
             } else if (s_need_listen_start) {
                 s_need_listen_start = false;
                 xz_send_listen_start();
@@ -389,7 +398,7 @@ APP_RESULT voice_chat_init(void)
         /* vẫn tạo task; lúc bật sẽ thử lại */
     }
     xz_set_callbacks(on_xz_audio, on_xz_msg);
-
+    mcp_init();
     /* Ring buffer Opus nhan ve dat trong PSRAM (RAM noi bo chi con ~31KB). */
     s_rx_rb = xRingbufferCreateWithCaps(RX_RB_BYTES, RINGBUF_TYPE_BYTEBUF,
                                         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);

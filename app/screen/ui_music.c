@@ -10,6 +10,7 @@
  */
 #include "ui_music.h"
 #include "ui_common.h"
+#include "lv_font_vn.h"
 #include "micro_sdcard_control.h"
 #include "audio_control.h"
 #include "esp_log.h"
@@ -192,7 +193,8 @@ static void music_row_create(uint16_t idx)
     icon = ui_make_label(row, LV_SYMBOL_AUDIO, &lv_font_montserrat_20, COL_ACCENT, 0, 0);
     lv_obj_align(icon, LV_ALIGN_LEFT_MID, 12, 0);
 
-    lbl = ui_make_label(row, name, &lv_font_montserrat_16, COL_TITLE, 0, 0);
+    /* Tên file bài hát có thể có dấu tiếng Việt -> dùng font VN. */
+    lbl = ui_make_label(row, name, &lv_font_vn_16, COL_TITLE, 0, 0);
     lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_width(lbl, g.list_inner_w - 42 - 12);
     lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 42, 0);
@@ -632,7 +634,7 @@ void ui_music_create(lv_obj_t *content)
     lv_obj_set_style_border_color(panel, COL_BORDER, 0);
     lv_obj_set_style_pad_all(panel, 0, 0);
 
-    g.title_lbl = ui_make_label(panel, "Select a song from the list", &lv_font_montserrat_20,
+    g.title_lbl = ui_make_label(panel, "Select a song from the list", &lv_font_vn_20,
                                 COL_TITLE, 12, 6);
     lv_label_set_long_mode(g.title_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_width(g.title_lbl, panel_w - 24);

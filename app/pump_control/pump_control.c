@@ -68,7 +68,7 @@ APP_RESULT pump_init() {
 
 APP_RESULT pump_set_state(PUMP_STATE state) {
     APP_RESULT ret = APP_OK;
-
+    printf("Setting pump state: %s\n", (state == PUMP_ON) ? "ON" : "OFF");
     if (state != pump_control.eCurrentState) {
         pump_control.eCurrentState = state;
         ret = pump_set_duty_raw((state == PUMP_ON) ? PUMP_PWM_MAX_DUTY : 0);

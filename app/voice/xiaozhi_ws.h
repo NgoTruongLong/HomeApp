@@ -30,5 +30,5 @@ APP_RESULT xz_send_listen_start(void);
 APP_RESULT xz_send_listen_stop(void);
 APP_RESULT xz_send_audio(const uint8_t *opus, size_t len);
 void       xz_set_callbacks(xz_audio_cb_t audio_cb, xz_msg_cb_t msg_cb);
-
+APP_RESULT xz_mcp_send_payload(const char* payload);
 #endif /* XIAOZHI_WS_H */

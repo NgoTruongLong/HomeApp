@@ -10,6 +10,7 @@
 #include "ui_chat.h"
 #include "ui_common.h"
 #include "voice_chat.h"
+#include "lv_font_vn.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -95,7 +96,8 @@ void ui_chat_create(lv_obj_t *content)
     lv_obj_set_style_border_color(panel, COL_BORDER, 0);
     lv_obj_set_style_pad_all(panel, 10, 0);
 
-    s_text_lbl = ui_make_label(panel, "(No conversation yet)", &lv_font_montserrat_16,
+    /* Font tiếng Việt: câu STT/TTS từ server có thể chứa dấu. */
+    s_text_lbl = ui_make_label(panel, "(No conversation yet)", &lv_font_vn_16,
                                COL_LABEL, 0, 0);
     lv_obj_set_width(s_text_lbl, W - 24 - 24);
     lv_label_set_long_mode(s_text_lbl, LV_LABEL_LONG_WRAP);

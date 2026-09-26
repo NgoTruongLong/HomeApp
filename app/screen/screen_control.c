@@ -378,6 +378,7 @@ static void ui_build_feature_pages(void)
     };
 
     for (page_id_t p = PAGE_CALENDAR; p < PAGE_COUNT; p++) {
+        printf("Creating feature page %d: %s\n", (int)p, titles[p]);
         feature_page_create(p, titles[p]);
         if (p == PAGE_CALENDAR) {
             ui_calendar_create(s_page_content[p]);
@@ -415,6 +416,7 @@ static void on_service_clicked(lv_event_t *e)
 {
     intptr_t v = (intptr_t)lv_event_get_user_data(e);
     if (v >= 0 && v < PAGE_COUNT) {
+        printf("Service clicked: %d\n", (int)v);
         ui_page_show((int)v);
     }
 }

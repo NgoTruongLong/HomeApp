@@ -12,6 +12,7 @@
 #include "ui_wifi.h"
 #include "ui_common.h"
 #include "wifi_control.h"
+#include "lv_font_vn.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <stdio.h>
@@ -226,8 +227,9 @@ static void wifi_row_create(lv_obj_t *list, uint16_t idx)
     lv_obj_align(sig, LV_ALIGN_LEFT_MID, 14, 0);
 
     /* tên SSID */
+    /* SSID có thể chứa dấu tiếng Việt -> dùng font VN. */
     lv_obj_t *name = ui_make_label(row, ap->ssid[0] ? ap->ssid : "(hidden)",
-                                   &lv_font_montserrat_16, COL_TITLE, 0, 0);
+                                   &lv_font_vn_16, COL_TITLE, 0, 0);
     lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
     lv_obj_set_width(name, 250);
     lv_obj_align(name, LV_ALIGN_LEFT_MID, 46, 0);
@@ -468,7 +470,7 @@ static void wifi_dlg_open(const char *ssid)
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
 
     /* SSID cần nhập */
-    lv_obj_t *ssid_lbl = ui_make_label(ov, ssid, &lv_font_montserrat_20, COL_ACCENT, 0, 0);
+    lv_obj_t *ssid_lbl = ui_make_label(ov, ssid, &lv_font_vn_20, COL_ACCENT, 0, 0);
     lv_label_set_long_mode(ssid_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_width(ssid_lbl, 420);
     lv_obj_set_style_text_align(ssid_lbl, LV_TEXT_ALIGN_CENTER, 0);
